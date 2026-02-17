@@ -11,6 +11,7 @@ export const levenshtein = (source: string, target: string): number => {
     return source.length;
   }
 
+  const previousPrevious = new Array(target.length + 1).fill(0);
   const previous = new Array(target.length + 1).fill(0);
   const current = new Array(target.length + 1).fill(0);
 
@@ -25,9 +26,15 @@ export const levenshtein = (source: string, target: string): number => {
       const cost = source[i - 1] === target[j - 1] ? 0 : 1;
 
       current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost);
+
+      // Damerau transposition: treat adjacent swaps as one edit.
+      if (i > 1 && j > 1 && source[i - 1] === target[j - 2] && source[i - 2] === target[j - 1]) {
+        current[j] = Math.min(current[j], previousPrevious[j - 2] + 1);
+      }
     }
 
     for (let j = 0; j <= target.length; j += 1) {
+      previousPrevious[j] = previous[j];
       previous[j] = current[j];
     }
   }

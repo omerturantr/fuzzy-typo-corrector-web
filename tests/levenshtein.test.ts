@@ -13,6 +13,11 @@ describe("levenshtein", () => {
     expect(levenshtein("core", "care")).toBe(1);
   });
 
+  it("treats adjacent transposition as one edit", () => {
+    expect(levenshtein("ab", "ba")).toBe(1);
+    expect(levenshtein("الكتبا", "الكتاب")).toBe(1);
+  });
+
   it("handles empty input", () => {
     expect(levenshtein("", "test")).toBe(4);
     expect(levenshtein("abc", "")).toBe(3);
