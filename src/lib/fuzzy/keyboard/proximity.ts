@@ -1,4 +1,6 @@
 import type { SupportedLanguage } from "../config";
+import { normalizeWord } from "../language";
+import { ARABIC_LAYOUT } from "./ar_layout";
 import { QWERTY_LAYOUT, type KeyboardLayout } from "./qwerty_layout";
 import { TR_Q_LAYOUT } from "./tr_q_layout";
 
@@ -8,12 +10,16 @@ const clamp = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));
 };
 
-const normalizeWord = (value: string, lang: SupportedLanguage): string => {
-  return value.trim().toLocaleLowerCase(lang === "tr" ? "tr-TR" : "en-US");
-};
-
 const resolveLayout = (lang: SupportedLanguage): KeyboardLayout => {
-  return lang === "tr" ? TR_Q_LAYOUT : QWERTY_LAYOUT;
+  if (lang === "tr") {
+    return TR_Q_LAYOUT;
+  }
+
+  if (lang === "ar") {
+    return ARABIC_LAYOUT;
+  }
+
+  return QWERTY_LAYOUT;
 };
 
 const keyDistance = (left: string, right: string, layout: KeyboardLayout): number => {

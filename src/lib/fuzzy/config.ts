@@ -1,10 +1,12 @@
-export type SupportedLanguage = "en" | "tr";
+export type SupportedLanguage = "en" | "tr" | "ar";
+export type UiLanguage = "en" | "tr" | "ar";
 
 export type FuzzyProfile = "strict" | "balanced" | "forgiving";
 
 export interface CorrectionRequest {
   word: string;
   lang: SupportedLanguage;
+  uiLang: UiLanguage;
   maxDistance: number;
   topK: number;
   profile: FuzzyProfile;
@@ -37,6 +39,11 @@ export interface RuleActivation {
 }
 
 export interface InferenceDebug {
+  crispInputs: {
+    editDistanceRatio: number;
+    keyboardProximityScore: number;
+    lengthDiffRatio: number;
+  };
   fuzzifiedInputs: {
     editDistance: Record<EditDistanceLabel, number>;
     keyboardProximity: Record<KeyboardProximityLabel, number>;
@@ -93,6 +100,7 @@ export const PROFILE_TUNING: Record<FuzzyProfile, ProfileTuning> = {
 export const DEFAULT_REQUEST: CorrectionRequest = {
   word: "",
   lang: "tr",
+  uiLang: "en",
   maxDistance: 2,
   topK: 10,
   profile: "balanced",

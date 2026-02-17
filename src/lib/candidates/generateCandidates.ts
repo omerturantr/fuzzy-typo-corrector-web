@@ -2,13 +2,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { SupportedLanguage } from "../fuzzy/config";
+import { localeCompareByLanguage, normalizeWord } from "../fuzzy/language";
 import { levenshtein } from "../fuzzy/levenshtein";
 
 const WORDLIST_CACHE = new Map<SupportedLanguage, string[]>();
-
-const normalizeWord = (value: string, lang: SupportedLanguage): string => {
-  return value.trim().toLocaleLowerCase(lang === "tr" ? "tr-TR" : "en-US");
-};
 
 const getWordlistPath = (lang: SupportedLanguage): string => {
   return path.join(process.cwd(), "data", "wordlists", `${lang}.txt`);
@@ -77,7 +74,7 @@ export const generateCandidates = async (
       return a.lengthDiff - b.lengthDiff;
     }
 
-    return a.word.localeCompare(b.word, params.lang === "tr" ? "tr" : "en");
+    return localeCompareByLanguage(a.word, b.word, params.lang);
   });
 
   const normalizedLimit = Math.max(params.limit, 1);

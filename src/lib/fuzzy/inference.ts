@@ -56,7 +56,7 @@ export const runFuzzyInference = (
 ): InferenceResult => {
   const tuning = PROFILE_TUNING[options.profile];
 
-  const fuzzifiedInputs = fuzzifyInputs({
+  const crispInputs = {
     editDistanceRatio: clamp(features.normalizedDistance * tuning.distanceSensitivity, 0, 1),
     keyboardProximityScore: clamp(
       features.keyboardProximityScore * tuning.keyboardSensitivity,
@@ -64,7 +64,8 @@ export const runFuzzyInference = (
       1,
     ),
     lengthDiffRatio: clamp(features.lengthDiffRatio * tuning.distanceSensitivity, 0, 1),
-  });
+  };
+  const fuzzifiedInputs = fuzzifyInputs(crispInputs);
 
   const aggregatedOutput: Record<CorrectnessLabel, number> = {
     low: 0,
@@ -125,6 +126,7 @@ export const runFuzzyInference = (
   const sortedActivations = [...activations].sort((a, b) => b.strength - a.strength);
 
   const debug: InferenceDebug = {
+    crispInputs,
     fuzzifiedInputs,
     activations: sortedActivations,
     aggregatedOutput,

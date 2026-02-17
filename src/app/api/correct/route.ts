@@ -9,9 +9,11 @@ import {
   type FuzzyProfile,
   type ScoredCandidate,
   type SupportedLanguage,
+  type UiLanguage,
 } from "@/lib/fuzzy/config";
 import { explainCandidate } from "@/lib/fuzzy/explain";
 import { runFuzzyInference } from "@/lib/fuzzy/inference";
+import { localeCompareByLanguage } from "@/lib/fuzzy/language";
 
 const clampInteger = (value: unknown, min: number, max: number, fallback: number): number => {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -26,7 +28,36 @@ const isProfile = (value: unknown): value is FuzzyProfile => {
 };
 
 const isSupportedLanguage = (value: unknown): value is SupportedLanguage => {
-  return value === "tr" || value === "en";
+  return value === "tr" || value === "en" || value === "ar";
+};
+
+const isUiLanguage = (value: unknown): value is UiLanguage => {
+  return value === "tr" || value === "en" || value === "ar";
+};
+
+const API_ERROR_MESSAGES: Record<UiLanguage, { invalidPayload: string; unexpectedError: string }> =
+  {
+    en: {
+      invalidPayload: "Invalid payload. Provide a single word and valid settings.",
+      unexpectedError: "Unexpected server error while calculating corrections.",
+    },
+    tr: {
+      invalidPayload: "Geçersiz istek. Tek bir kelime ve geçerli ayarlar gönderin.",
+      unexpectedError: "Düzeltme hesaplanırken beklenmeyen bir sunucu hatası oluştu.",
+    },
+    ar: {
+      invalidPayload: "الطلب غير صالح. أرسل كلمة واحدة وإعدادات صحيحة.",
+      unexpectedError: "حدث خطأ غير متوقع في الخادم أثناء حساب التصحيحات.",
+    },
+  };
+
+const resolveUiLanguage = (body: unknown): UiLanguage => {
+  if (!body || typeof body !== "object") {
+    return DEFAULT_REQUEST.uiLang;
+  }
+
+  const value = (body as Record<string, unknown>).uiLang;
+  return isUiLanguage(value) ? value : DEFAULT_REQUEST.uiLang;
 };
 
 const MIN_RELIABLE_SCORE: Record<FuzzyProfile, number> = {
@@ -48,11 +79,13 @@ const parseRequest = (body: unknown): CorrectionRequest | null => {
   }
 
   const lang = isSupportedLanguage(data.lang) ? data.lang : DEFAULT_REQUEST.lang;
+  const uiLang = isUiLanguage(data.uiLang) ? data.uiLang : DEFAULT_REQUEST.uiLang;
   const profile = isProfile(data.profile) ? data.profile : DEFAULT_REQUEST.profile;
 
   return {
     word,
     lang,
+    uiLang,
     profile,
     maxDistance: clampInteger(data.maxDistance, 1, PROFILE_TUNING[profile].maxDistanceCap, 2),
     topK: clampInteger(data.topK, 1, 20, DEFAULT_REQUEST.topK),
@@ -60,13 +93,16 @@ const parseRequest = (body: unknown): CorrectionRequest | null => {
 };
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  let uiLang: UiLanguage = DEFAULT_REQUEST.uiLang;
+
   try {
     const rawBody = await request.json();
+    uiLang = resolveUiLanguage(rawBody);
     const payload = parseRequest(rawBody);
 
     if (!payload) {
       return NextResponse.json(
-        { error: "Invalid payload. Provide a single word and valid settings." },
+        { error: API_ERROR_MESSAGES[uiLang].invalidPayload },
         { status: 400 },
       );
     }
@@ -89,7 +125,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         word: candidate.word,
         score: inference.score,
         features,
-        explanation: explainCandidate(payload.word, candidate.word, features, inference),
+        explanation: explainCandidate(
+          payload.word,
+          candidate.word,
+          features,
+          inference,
+          payload.uiLang,
+        ),
       };
     });
 
@@ -111,7 +153,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           return b.features.keyboardProximityScore - a.features.keyboardProximityScore;
         }
 
-        return a.word.localeCompare(b.word, payload.lang === "tr" ? "tr" : "en");
+        return localeCompareByLanguage(a.word, b.word, payload.lang);
       })
       .slice(0, payload.topK);
 
@@ -135,6 +177,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       explanation: bestCandidate?.explanation ?? null,
       settings: {
         lang: payload.lang,
+        uiLang: payload.uiLang,
         maxDistance: payload.maxDistance,
         topK: payload.topK,
         profile: payload.profile,
@@ -142,7 +185,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   } catch {
     return NextResponse.json(
-      { error: "Unexpected server error while calculating corrections." },
+      { error: API_ERROR_MESSAGES[uiLang].unexpectedError },
       { status: 500 },
     );
   }

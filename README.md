@@ -15,7 +15,7 @@ No external APIs or third-party correction services are used.
 
 - Input controls:
   - `word`
-  - `language` (`tr` / `en`)
+  - `language` (`tr` / `en` / `ar`)
   - `max edit distance`
   - `result count`
   - `fuzzy profile` (`strict`, `balanced`, `forgiving`)
@@ -63,6 +63,7 @@ data/
   wordlists/
     tr.txt
     en.txt
+    ar.txt
 
 tests/
   levenshtein.test.ts
@@ -138,6 +139,7 @@ npm run wordlists:refresh
 Current generated sizes (after refresh):
 
 - `data/wordlists/en.txt`: ~19,900 words
+- `data/wordlists/ar.txt`: ~39,000 words
 - `data/wordlists/tr.txt`: ~34,500 words
 
 ## Notes

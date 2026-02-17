@@ -1,10 +1,7 @@
 import type { SupportedLanguage, CandidateFeatures } from "../fuzzy/config";
+import { normalizeWord } from "../fuzzy/language";
 import { levenshtein } from "../fuzzy/levenshtein";
 import { keyboardProximityScore } from "../fuzzy/keyboard/proximity";
-
-const normalizeWord = (value: string, lang: SupportedLanguage): string => {
-  return value.trim().toLocaleLowerCase(lang === "tr" ? "tr-TR" : "en-US");
-};
 
 const commonPrefixLength = (left: string, right: string): number => {
   const limit = Math.min(left.length, right.length);

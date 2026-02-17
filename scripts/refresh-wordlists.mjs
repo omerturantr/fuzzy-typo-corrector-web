@@ -3,6 +3,8 @@ import path from "node:path";
 
 const EN_SOURCE_URL =
   "https://raw.githubusercontent.com/first20hours/google-10000-english/master/20k.txt";
+const AR_SOURCE_URL =
+  "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/ar/ar_50k.txt";
 const TR_WIKTIONARY_URL =
   "https://en.wiktionary.org/w/index.php?title=Wiktionary:Frequency_lists/Turkish_wordlist&action=raw";
 const TR_FREQUENT_URL =
@@ -12,6 +14,7 @@ const TR_MASTER_URL =
 
 const WORDLIST_DIR = path.join(process.cwd(), "data", "wordlists");
 const EN_OUTPUT = path.join(WORDLIST_DIR, "en.txt");
+const AR_OUTPUT = path.join(WORDLIST_DIR, "ar.txt");
 const TR_OUTPUT = path.join(WORDLIST_DIR, "tr.txt");
 
 const EN_SEED_WORDS = [
@@ -35,6 +38,8 @@ const TR_SEED_WORDS = [
   "bilgisayar",
   "mühendislik",
 ];
+
+const AR_SEED_WORDS = ["تصحيح", "إملاء", "لوحة", "مفاتيح", "خوارزمية", "قاموس", "حاسوب", "منطق"];
 
 const fetchText = async (url) => {
   const response = await fetch(url);
@@ -89,6 +94,31 @@ const normalizeTurkishWord = (word) => {
   return normalized;
 };
 
+const normalizeArabicWord = (word) => {
+  const normalized = word
+    .trim()
+    .toLocaleLowerCase("ar")
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/gu, "")
+    .replace(/[\u200C\u200D]/gu, "")
+    .replace(/\u0640/gu, "")
+    .replace(/[أإآٱ]/gu, "ا")
+    .replace(/[ؤ]/gu, "و")
+    .replace(/[ئى]/gu, "ي")
+    .replace(/[ة]/gu, "ه")
+    .replace(/ا{2,}/gu, "ا")
+    .replace(/[^\u0621-\u063A\u0641-\u064A]/gu, "");
+
+  if (normalized.length < 2 || normalized.length > 32) {
+    return null;
+  }
+
+  if (!/^[\u0621-\u063A\u0641-\u064A]+$/u.test(normalized)) {
+    return null;
+  }
+
+  return normalized;
+};
+
 const dedupeSorted = (words, locale) => {
   const unique = Array.from(new Set(words));
 
@@ -124,11 +154,28 @@ const parsePlainWordList = (content) => {
     .filter((line) => line.length > 0);
 };
 
+const parseArabicFrequencyWordList = (content) => {
+  return content
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [word, frequencyRaw] = line.split(/\s+/u);
+      const frequency = Number(frequencyRaw);
+
+      return { word, frequency };
+    })
+    .filter((entry) => Number.isFinite(entry.frequency) && entry.frequency >= 3)
+    .map((entry) => entry.word)
+    .filter(Boolean);
+};
+
 const main = async () => {
   await mkdir(WORDLIST_DIR, { recursive: true });
 
-  const [enSource, trWiktionary, trFrequent, trMaster] = await Promise.all([
+  const [enSource, arSource, trWiktionary, trFrequent, trMaster] = await Promise.all([
     fetchText(EN_SOURCE_URL),
+    fetchText(AR_SOURCE_URL),
     fetchText(TR_WIKTIONARY_URL),
     fetchText(TR_FREQUENT_URL),
     fetchText(TR_MASTER_URL),
@@ -137,6 +184,12 @@ const main = async () => {
   const enWords = dedupeSorted(
     [...EN_SEED_WORDS, ...parsePlainWordList(enSource)].map(normalizeEnglishWord).filter(Boolean),
     "en",
+  );
+  const arWords = dedupeSorted(
+    [...AR_SEED_WORDS, ...parseArabicFrequencyWordList(arSource)]
+      .map(normalizeArabicWord)
+      .filter(Boolean),
+    "ar",
   );
 
   const trSeedWords = TR_SEED_WORDS.map(normalizeTurkishWord).filter(Boolean);
@@ -154,10 +207,12 @@ const main = async () => {
 
   await Promise.all([
     writeFile(EN_OUTPUT, `${enWords.join("\n")}\n`, "utf8"),
+    writeFile(AR_OUTPUT, `${arWords.join("\n")}\n`, "utf8"),
     writeFile(TR_OUTPUT, `${trWords.join("\n")}\n`, "utf8"),
   ]);
 
   console.log(`English words: ${enWords.length}`);
+  console.log(`Arabic words: ${arWords.length}`);
   console.log(`Turkish words: ${trWords.length}`);
 };
 
