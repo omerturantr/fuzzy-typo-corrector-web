@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# fuzzy-typo-corrector-web
 
-## Getting Started
+A local Next.js web application that detects and corrects single-word typos using a fuzzy logic inference system (FIS).
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js (App Router) + TypeScript
+- TailwindCSS
+- Vitest
+- ESLint + Prettier
+
+No external APIs or third-party correction services are used.
+
+## Features
+
+- Input controls:
+  - `word`
+  - `language` (`tr` / `en`)
+  - `max edit distance`
+  - `result count`
+  - `fuzzy profile` (`strict`, `balanced`, `forgiving`)
+- Candidate generation from local dictionaries in `data/wordlists`
+- Feature extraction:
+  - `editDistance`
+  - `normalizedDistance`
+  - `keyboardProximityScore`
+  - `lengthDiff`
+  - `prefixSimilarity`
+- Mamdani-style fuzzy inference:
+  - Fuzzification
+  - Rule evaluation
+  - Aggregation
+  - Centroid defuzzification (`0-100`)
+- Ranked suggestions with explanation and debug panel
+
+## Folder Structure
+
+```text
+src/
+  app/
+    page.tsx
+    api/
+      correct/route.ts
+  lib/
+    fuzzy/
+      config.ts
+      membership.ts
+      rules.ts
+      inference.ts
+      defuzzify.ts
+      explain.ts
+      levenshtein.ts
+      keyboard/
+        tr_q_layout.ts
+        qwerty_layout.ts
+        proximity.ts
+    candidates/
+      generateCandidates.ts
+    features/
+      extractFeatures.ts
+
+data/
+  wordlists/
+    tr.txt
+    en.txt
+
+tests/
+  levenshtein.test.ts
+  membership.test.ts
+  inference.test.ts
+  candidates.test.ts
+  proximity.test.ts
+  quality.test.ts
+
+scripts/
+  refresh-wordlists.mjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## API
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### POST `/api/correct`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Request:
 
-## Learn More
+```json
+{
+  "word": "bilgsayar",
+  "lang": "tr",
+  "maxDistance": 2,
+  "topK": 10,
+  "profile": "balanced"
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+Response (example):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```json
+{
+  "input": "bilgsayar",
+  "score": 90.2,
+  "best": "bilgisayar",
+  "candidates": []
+}
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The response also includes per-candidate features, fuzzy output label, and debug explanation.
 
-## Deploy on Vercel
+## Run
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open `http://localhost:3000`.
+
+## Test
+
+```bash
+npm test
+```
+
+## Quality
+
+```bash
+npm run lint
+npm run format
+```
+
+## Refresh Wordlists
+
+The project includes a wordlist refresh script that rebuilds local dictionaries from curated public sources.
+
+```bash
+npm run wordlists:refresh
+```
+
+Current generated sizes (after refresh):
+
+- `data/wordlists/en.txt`: ~19,900 words
+- `data/wordlists/tr.txt`: ~34,500 words
+
+## Notes
+
+- Wordlists are local text files and can be extended without code changes.
+- The fuzzy profile changes sensitivity/weighting and candidate filtering strictness.
