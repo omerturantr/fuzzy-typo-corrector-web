@@ -10,7 +10,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-space-grotesk);
+  --font-sans: var(--font-space-grotesk), var(--font-noto-naskh-arabic);
   --font-mono: var(--font-ibm-plex-mono);
 }
 
@@ -22,7 +22,7 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--foreground);
-  font-family: var(--font-space-grotesk), sans-serif;
+  font-family: var(--font-space-grotesk), var(--font-noto-naskh-arabic), sans-serif;
   background:
     radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.2) 0%, transparent 30%),
     radial-gradient(circle at 85% 10%, rgba(59, 130, 246, 0.2) 0%, transparent 35%),
